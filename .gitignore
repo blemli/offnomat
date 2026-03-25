@@ -491,5 +491,6 @@ $RECYCLE.BIN/
 .idea
 
 hours_cache.sqlite
+travel_times_cache.json
 /admin/static/node_modules
 admin/static/config.json
