@@ -24,8 +24,8 @@ while True:
         logging.info("Disabeling because of Night")
     else:
         for i,place in enumerate(places):
-            place=place["name"]
             duration=place["duration"]
+            place=place["name"]
             oh=hours.get(place,lat,lon)
             if place == "Diethelm":
                 pixels[i]=colors.WHITE.rgb
