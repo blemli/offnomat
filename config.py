@@ -11,6 +11,8 @@ try:
         items.append(mode)
         places=config["places"]
         items.append(places)
+        graphhopper_key=config.get("graphhopper_key")
+        items.append(graphhopper_key)
 
 except FileNotFoundError:
     logging.error("config.json not found, please go to offnomat.local to edit config")
