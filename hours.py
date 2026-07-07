@@ -1,5 +1,6 @@
 import logging
 import sys
+import time
 import requests
 from icecream import ic
 from opening_hours import OpeningHours
@@ -12,9 +13,38 @@ import requests_cache
 requests_cache.install_cache('hours_cache', backend='sqlite', expire_after=3600)
 
 # overpass-api.de blocks bare python-requests over plain HTTP (returns 406) and
-# the http endpoint is flaky (504). Use HTTPS with a descriptive User-Agent.
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+# the http endpoint is flaky (504). Use HTTPS with a descriptive User-Agent, and
+# fall back to a mirror when the main instance is overloaded (429/504).
+OVERPASS_URLS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+]
 HEADERS = {"User-Agent": "offnomat/1.0 (https://problem.li; raspberry-pi opening-hours display)"}
+
+
+def overpass_get(query, retries=3):
+    """Run an Overpass query, retrying on rate-limit/timeout with backoff and
+    falling back across mirrors. Returns a 200 Response, or None if all fail.
+    (requests_cache only stores 200s, so retries always hit the network.)"""
+    for url in OVERPASS_URLS:
+        for attempt in range(retries):
+            try:
+                r = requests.get(url, params={'data': query}, headers=HEADERS, timeout=60)
+            except requests.RequestException as e:
+                logging.warning(f"overpass {url} error: {e}")
+                time.sleep(2 ** attempt)
+                continue
+            if r.status_code == 200:
+                return r
+            if r.status_code in (429, 502, 503, 504):
+                wait = int(r.headers.get("Retry-After", 2 ** attempt))
+                logging.warning(f"overpass {url} HTTP {r.status_code}; retry in {wait}s")
+                time.sleep(wait)
+                continue
+            logging.warning(f"overpass {url} HTTP {r.status_code}")
+            break  # non-retryable status; try next mirror
+    logging.error("overpass: all endpoints failed")
+    return None
 
 def find_place(lat, lon, search_name, radius=10000):
     # Properly format search_name for regex matching in Overpass QL
@@ -27,7 +57,6 @@ def find_place(lat, lon, search_name, radius=10000):
     - search_name: The name of the entity you're looking for, case-insensitive.
     - radius: Search radius in meters.
     """
-    overpass_url = OVERPASS_URL
     #search_name = search_name.replace(" ", ".*")  # Use '.*' to match any character including spaces between words
     overpass_query = f"""
     [out:json];
@@ -43,7 +72,9 @@ def find_place(lat, lon, search_name, radius=10000):
     out center;
     """
     #print(overpass_query)
-    response = requests.get(overpass_url, params={'data': overpass_query}, headers=HEADERS)
+    response = overpass_get(overpass_query)
+    if response is None:
+        return None
     data = response.json()
 
     nearest_entity = None
@@ -69,7 +100,6 @@ def get_hours_string(osm_id):
     # List of OSM types to iterate through
     osm_types = ["node", "way", "relation"]
     # Overpass API URL
-    overpass_url = OVERPASS_URL
 
     for osm_type in osm_types:
         # Overpass QL (Query Language) to get opening hours
@@ -82,7 +112,9 @@ def get_hours_string(osm_id):
         out skel qt;
         """
         # Attempt to fetch data for current osm_type
-        response = requests.get(overpass_url, params={'data': overpass_query}, headers=HEADERS)
+        response = overpass_get(overpass_query)
+        if response is None:
+            continue
         data = response.json()
 
         # Extracting opening hours from the response
