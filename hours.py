@@ -11,6 +11,11 @@ import requests_cache
 
 requests_cache.install_cache('hours_cache', backend='sqlite', expire_after=3600)
 
+# overpass-api.de blocks bare python-requests over plain HTTP (returns 406) and
+# the http endpoint is flaky (504). Use HTTPS with a descriptive User-Agent.
+OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+HEADERS = {"User-Agent": "offnomat/1.0 (https://problem.li; raspberry-pi opening-hours display)"}
+
 def find_place(lat, lon, search_name, radius=10000):
     # Properly format search_name for regex matching in Overpass QL
     #search_name = search_name.replace(" ", ".*")  # Use '.*' to match any character including spaces between words
@@ -22,7 +27,7 @@ def find_place(lat, lon, search_name, radius=10000):
     - search_name: The name of the entity you're looking for, case-insensitive.
     - radius: Search radius in meters.
     """
-    overpass_url = "http://overpass-api.de/api/interpreter"
+    overpass_url = OVERPASS_URL
     #search_name = search_name.replace(" ", ".*")  # Use '.*' to match any character including spaces between words
     overpass_query = f"""
     [out:json];
@@ -38,7 +43,7 @@ def find_place(lat, lon, search_name, radius=10000):
     out center;
     """
     #print(overpass_query)
-    response = requests.get(overpass_url, params={'data': overpass_query})
+    response = requests.get(overpass_url, params={'data': overpass_query}, headers=HEADERS)
     data = response.json()
 
     nearest_entity = None
@@ -64,7 +69,7 @@ def get_hours_string(osm_id):
     # List of OSM types to iterate through
     osm_types = ["node", "way", "relation"]
     # Overpass API URL
-    overpass_url = "http://overpass-api.de/api/interpreter"
+    overpass_url = OVERPASS_URL
 
     for osm_type in osm_types:
         # Overpass QL (Query Language) to get opening hours
@@ -77,7 +82,7 @@ def get_hours_string(osm_id):
         out skel qt;
         """
         # Attempt to fetch data for current osm_type
-        response = requests.get(overpass_url, params={'data': overpass_query})
+        response = requests.get(overpass_url, params={'data': overpass_query}, headers=HEADERS)
         data = response.json()
 
         # Extracting opening hours from the response
