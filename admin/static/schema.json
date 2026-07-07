@@ -17,6 +17,13 @@
       ],
       "default": "bike"
     },
+    "night_mode": {
+      "type": "boolean",
+      "format": "checkbox",
+      "title": "Night mode",
+      "description": "Turn the LEDs off when the light sensor reports darkness",
+      "default": true
+    },
     "places": {
       "type": "array",
       "format": "table",
