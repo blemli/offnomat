@@ -8,7 +8,7 @@ import atexit
 
 from led import pixels
 from icecream import ic
-from config import places
+from config import places, night_mode
 from light import is_dark
 
 LED_COUNT = 16
@@ -19,7 +19,7 @@ lon=8.72413
 
 atexit.register(led.cleanup)
 while True:
-    if is_dark():
+    if night_mode and is_dark():
         led.cleanup()
         logging.info("Disabeling because of Night")
     else:
