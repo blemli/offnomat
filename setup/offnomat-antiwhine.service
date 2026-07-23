@@ -1,0 +1,7 @@
+[Unit]
+Description=CPU load kick to keep the PoE HAT converter out of its audible burst mode
+
+[Service]
+Type=oneshot
+Nice=19
+ExecStart=/bin/sh -c 'for i in 1 2 3 4; do timeout 2 yes >/dev/null & done; wait'

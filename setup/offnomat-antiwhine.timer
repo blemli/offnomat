@@ -1,0 +1,10 @@
+[Unit]
+Description=periodic CPU load kick to prevent PoE coil whine
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=3min
+AccuracySec=30sec
+
+[Install]
+WantedBy=timers.target
