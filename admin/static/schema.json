@@ -8,14 +8,18 @@
   "properties": {
     "mode": {
       "type": "string",
-      "description": "the mode of transport you usually use",
+      "description": "the mode of transport you usually use to get there",
       "enum": [
+        "foot",
         "bike",
-        "pedestrian",
-        "car",
-        "public-transport"
+        "car"
       ],
       "default": "bike"
+    },
+    "graphhopper_key": {
+      "type": "string",
+      "title": "GraphHopper API key",
+      "description": "API key from graphhopper.com for travel-time routing. Optional — without it, colors use opening hours and time-spent only (no travel time)."
     },
     "night_mode": {
       "type": "boolean",
